@@ -48,7 +48,7 @@ export default function DrawerCard({ drawer, onTake, onRestock, onEdit, onDelete
             <button
               onClick={() => onEdit(drawer)}
               className="text-on-surface-variant hover:text-on-surface p-1.5 rounded-lg hover:bg-surface-container transition-colors"
-              title="ערוך"
+              title="Edit"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -58,7 +58,7 @@ export default function DrawerCard({ drawer, onTake, onRestock, onEdit, onDelete
             <button
               onClick={() => onDelete(id)}
               className="text-on-surface-variant hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
-              title="מחק"
+              title="Delete"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polyline points="3 6 5 6 21 6" />
@@ -74,24 +74,24 @@ export default function DrawerCard({ drawer, onTake, onRestock, onEdit, onDelete
       {/* Stats row */}
       <div className="px-4 py-3 flex items-center gap-5">
         <div>
-          <p className="text-label text-on-surface-variant mb-0.5">במלאי</p>
+          <p className="text-label text-on-surface-variant mb-0.5">In Stock</p>
           <p className={`text-4xl font-bold font-display leading-none transition-all duration-150 ${qtyColor} ${flash ? 'scale-90' : 'scale-100'}`}>
             {quantity}
           </p>
         </div>
         <div className="w-px self-stretch bg-outline-variant" />
         <div>
-          <p className="text-label text-on-surface-variant mb-0.5">נלקח</p>
+          <p className="text-label text-on-surface-variant mb-0.5">Taken</p>
           <p className="text-4xl font-bold font-display leading-none text-on-surface/30">{taken}</p>
         </div>
         {(isLow || isEmpty) && (
-          <div className="ms-auto">
+          <div className="ml-auto">
             <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
               isEmpty
                 ? 'bg-red-50 text-red-700 border-red-200'
                 : 'bg-amber-50 text-amber-700 border-amber-200'
             }`}>
-              {isEmpty ? 'ריק' : 'מלאי נמוך'}
+              {isEmpty ? 'Empty' : 'Low Stock'}
             </span>
           </div>
         )}
@@ -108,7 +108,7 @@ export default function DrawerCard({ drawer, onTake, onRestock, onEdit, onDelete
               : 'bg-secondary text-white hover:bg-secondary/90 shadow-sm active:shadow-none cursor-pointer'
           }`}
         >
-          {isEmpty ? 'אזל מהמלאי' : 'קח 1 −'}
+          {isEmpty ? 'Out of Stock' : '− Take 1'}
         </button>
 
         {!restocking ? (
@@ -116,7 +116,7 @@ export default function DrawerCard({ drawer, onTake, onRestock, onEdit, onDelete
             onClick={() => setRestocking(true)}
             className="w-full py-2 rounded-xl text-sm font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors border border-outline-variant"
           >
-            + חידוש מלאי
+            + Restock
           </button>
         ) : (
           <div className="flex gap-2">
@@ -124,7 +124,7 @@ export default function DrawerCard({ drawer, onTake, onRestock, onEdit, onDelete
               type="number"
               value={restockAmount}
               onChange={e => setRestockAmount(e.target.value)}
-              placeholder="כמות"
+              placeholder="Qty"
               min="1"
               autoFocus
               onKeyDown={e => {
@@ -137,7 +137,7 @@ export default function DrawerCard({ drawer, onTake, onRestock, onEdit, onDelete
               onClick={handleRestock}
               className="px-4 py-2 bg-secondary text-white rounded-xl text-sm font-semibold hover:bg-secondary/90 transition-colors"
             >
-              הוסף
+              Add
             </button>
             <button
               onClick={() => { setRestocking(false); setRestockAmount('') }}
