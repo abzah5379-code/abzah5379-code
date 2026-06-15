@@ -6,12 +6,12 @@ import DrawerModal from './components/DrawerModal'
 const STORAGE_KEY = 'warehouse_drawers'
 
 const sampleData = [
-  { id: '1', drawerNumber: 'A-01', itemName: 'M8 Bolt 25mm', sku: 'BLT-M8-25', quantity: 47, taken: 3, lowStockThreshold: 10 },
-  { id: '2', drawerNumber: 'A-02', itemName: 'M8 Hex Nut', sku: 'NUT-M8-SS', quantity: 8, taken: 42, lowStockThreshold: 15 },
-  { id: '3', drawerNumber: 'B-01', itemName: 'Phillips Screw #4', sku: 'SCR-PH4-25', quantity: 120, taken: 30, lowStockThreshold: 20 },
-  { id: '4', drawerNumber: 'B-02', itemName: 'Cable Tie 200mm', sku: 'TIE-200-BK', quantity: 5, taken: 95, lowStockThreshold: 20 },
-  { id: '5', drawerNumber: 'C-01', itemName: 'Washer M10', sku: 'WSH-M10-ZN', quantity: 200, taken: 50, lowStockThreshold: 30 },
-  { id: '6', drawerNumber: 'C-02', itemName: 'O-Ring 15mm', sku: 'ORG-15-RB', quantity: 0, taken: 20, lowStockThreshold: 5 },
+  { id: '1', drawerNumber: 'A-01', itemName: 'ברגיט M8 25 מ"מ', sku: 'BLT-M8-25', quantity: 47, taken: 3, lowStockThreshold: 10 },
+  { id: '2', drawerNumber: 'A-02', itemName: 'אום שישה M8', sku: 'NUT-M8-SS', quantity: 8, taken: 42, lowStockThreshold: 15 },
+  { id: '3', drawerNumber: 'B-01', itemName: 'ברג פיליפס #4', sku: 'SCR-PH4-25', quantity: 120, taken: 30, lowStockThreshold: 20 },
+  { id: '4', drawerNumber: 'B-02', itemName: 'קשרון כבל 200 מ"מ', sku: 'TIE-200-BK', quantity: 5, taken: 95, lowStockThreshold: 20 },
+  { id: '5', drawerNumber: 'C-01', itemName: 'פנדה M10', sku: 'WSH-M10-ZN', quantity: 200, taken: 50, lowStockThreshold: 30 },
+  { id: '6', drawerNumber: 'C-02', itemName: 'טבעת אטם 15 מ"מ', sku: 'ORG-15-RB', quantity: 0, taken: 20, lowStockThreshold: 5 },
 ]
 
 export default function App() {

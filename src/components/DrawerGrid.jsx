@@ -5,8 +5,8 @@ export default function DrawerGrid({ drawers, onTake, onRestock, onEdit, onDelet
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-24 text-center">
         <div className="text-5xl mb-4">📦</div>
-        <h2 className="font-display font-semibold text-xl text-on-surface mb-2">No drawers found</h2>
-        <p className="text-on-surface-variant text-sm">Try a different search or add a new drawer.</p>
+        <h2 className="font-display font-semibold text-xl text-on-surface mb-2">לא נמצאו מגירות</h2>
+        <p className="text-on-surface-variant text-sm">נסה חיפוש אחר או הוסף מגירה חדשה.</p>
       </div>
     )
   }

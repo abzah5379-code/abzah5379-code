@@ -44,7 +44,7 @@ export default function DrawerModal({ drawer, onSave, onClose }) {
       <div className="relative bg-white rounded-2xl shadow-ambient-lg w-full max-w-md">
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-outline-variant">
           <h2 className="font-display font-bold text-title-md text-on-surface">
-            {drawer ? 'Edit Drawer' : 'Add Drawer'}
+            {drawer ? 'עריכת מגירה' : 'הוספת מגירה'}
           </h2>
           <button
             onClick={onClose}
@@ -59,7 +59,7 @@ export default function DrawerModal({ drawer, onSave, onClose }) {
         <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-label text-on-surface-variant block mb-1.5">Drawer #</label>
+              <label className="text-label text-on-surface-variant block mb-1.5">מספר מגירה</label>
               <input
                 required
                 value={form.drawerNumber}
@@ -69,7 +69,7 @@ export default function DrawerModal({ drawer, onSave, onClose }) {
               />
             </div>
             <div>
-              <label className="text-label text-on-surface-variant block mb-1.5">SKU</label>
+              <label className="text-label text-on-surface-variant block mb-1.5">מק״ט</label>
               <input
                 required
                 value={form.sku}
@@ -81,19 +81,19 @@ export default function DrawerModal({ drawer, onSave, onClose }) {
           </div>
 
           <div>
-            <label className="text-label text-on-surface-variant block mb-1.5">Item Name</label>
+            <label className="text-label text-on-surface-variant block mb-1.5">שם פריט</label>
             <input
               required
               value={form.itemName}
               onChange={e => set('itemName', e.target.value)}
-              placeholder="M8 Bolt 25mm"
+              placeholder='ברגיט M8 25 מ"מ'
               className="input-field"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-label text-on-surface-variant block mb-1.5">Quantity</label>
+              <label className="text-label text-on-surface-variant block mb-1.5">כמות</label>
               <input
                 required
                 type="number"
@@ -105,7 +105,7 @@ export default function DrawerModal({ drawer, onSave, onClose }) {
               />
             </div>
             <div>
-              <label className="text-label text-on-surface-variant block mb-1.5">Low Stock Alert</label>
+              <label className="text-label text-on-surface-variant block mb-1.5">התראת מלאי נמוך</label>
               <input
                 type="number"
                 min="0"
@@ -123,13 +123,13 @@ export default function DrawerModal({ drawer, onSave, onClose }) {
               onClick={onClose}
               className="flex-1 py-3 rounded-xl font-semibold text-sm text-on-surface-variant border border-outline-variant hover:bg-surface-container transition-colors"
             >
-              Cancel
+              ביטול
             </button>
             <button
               type="submit"
               className="flex-1 py-3 rounded-xl font-semibold text-sm text-white gradient-primary btn-scale"
             >
-              {drawer ? 'Save Changes' : 'Add Drawer'}
+              {drawer ? 'שמור שינויים' : 'הוסף מגירה'}
             </button>
           </div>
         </form>

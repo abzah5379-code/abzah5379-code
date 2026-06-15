@@ -14,13 +14,13 @@
   body {
     background-color: #fff8f5;
     color: #1f1b18;
-    font-family: 'Manrope', sans-serif;
+    font-family: 'Heebo', 'Manrope', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: 'Heebo', 'Plus Jakarta Sans', sans-serif;
   }
 }
 

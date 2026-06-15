@@ -25,8 +25,8 @@ export default {
         'outline-variant': 'rgba(115,103,97,0.15)',
       },
       fontFamily: {
-        display: ['"Plus Jakarta Sans"', 'sans-serif'],
-        body: ['Manrope', 'sans-serif'],
+        display: ['Heebo', '"Plus Jakarta Sans"', 'sans-serif'],
+        body: ['Heebo', 'Manrope', 'sans-serif'],
       },
       fontSize: {
         'display-lg': ['3.5rem', { lineHeight: '1.1', letterSpacing: '-0.02em' }],
