@@ -1,19 +1,24 @@
 import { useState } from 'react'
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native'
+import { colors } from '../theme'
 
 export default function DrawerCard({ drawer, onTake, onRestock, onEdit, onDelete }) {
   const { id, drawerNumber, itemName, sku, quantity, taken, lowStockThreshold } = drawer
   const [restocking, setRestocking] = useState(false)
   const [restockAmount, setRestockAmount] = useState('')
-  const [flash, setFlash] = useState(false)
 
   const isLow = quantity > 0 && quantity <= lowStockThreshold
   const isEmpty = quantity === 0
 
-  const handleTake = () => {
-    if (isEmpty) return
-    setFlash(true)
-    onTake(id)
-    setTimeout(() => setFlash(false), 180)
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Drawer',
+      `Remove "${drawerNumber} – ${itemName}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => onDelete(id) },
+      ]
+    )
   }
 
   const handleRestock = () => {
@@ -24,136 +29,154 @@ export default function DrawerCard({ drawer, onTake, onRestock, onEdit, onDelete
     setRestocking(false)
   }
 
-  const qtyColor = isEmpty
-    ? 'text-red-500'
-    : isLow
-    ? 'text-amber-600'
-    : 'text-secondary'
+  const qtyColor = isEmpty ? '#dc2626' : isLow ? '#d97706' : colors.secondary
+  const borderColor = isEmpty ? '#fca5a5' : isLow ? '#fcd34d' : colors.outlineVariant
+  const headerBorderColor = isEmpty ? '#fee2e2' : isLow ? '#fef3c7' : colors.outlineVariant
 
   return (
-    <div className={`bg-white rounded-2xl border overflow-hidden transition-shadow duration-200 hover:shadow-ambient ${
-      isEmpty ? 'border-red-200' : isLow ? 'border-amber-200' : 'border-outline-variant'
-    }`}>
-      {/* Header strip */}
-      <div className={`px-4 pt-4 pb-3 border-b ${
-        isEmpty ? 'border-red-100' : isLow ? 'border-amber-100' : 'border-outline-variant'
-      }`}>
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <span className="text-label font-bold tracking-widest text-primary">{drawerNumber}</span>
-            <h3 className="font-display font-semibold text-on-surface text-base leading-snug mt-0.5 truncate">{itemName}</h3>
-            <p className="text-label text-on-surface-variant mt-0.5">{sku}</p>
-          </div>
-          {(onEdit || onDelete) && (
-            <div className="flex gap-1 shrink-0 mt-0.5">
-              {onEdit && (
-                <button
-                  onClick={() => onEdit(drawer)}
-                  className="text-on-surface-variant hover:text-on-surface p-1.5 rounded-lg hover:bg-surface-container transition-colors"
-                  title="Edit"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                  </svg>
-                </button>
-              )}
-              {onDelete && (
-                <button
-                  onClick={() => onDelete(id)}
-                  className="text-on-surface-variant hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                  title="Delete"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6l-1 14H6L5 6" />
-                    <path d="M10 11v6M14 11v6" />
-                    <path d="M9 6V4h6v2" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Stats row */}
-      <div className="px-4 py-3 flex items-center gap-5">
-        <div>
-          <p className="text-label text-on-surface-variant mb-0.5">In Stock</p>
-          <p className={`text-4xl font-bold font-display leading-none transition-all duration-150 ${qtyColor} ${flash ? 'scale-90' : 'scale-100'}`}>
-            {quantity}
-          </p>
-        </div>
-        <div className="w-px self-stretch bg-outline-variant" />
-        <div>
-          <p className="text-label text-on-surface-variant mb-0.5">Taken</p>
-          <p className="text-4xl font-bold font-display leading-none text-on-surface/30">{taken}</p>
-        </div>
-        {(isLow || isEmpty) && (
-          <div className="ml-auto">
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
-              isEmpty
-                ? 'bg-red-50 text-red-700 border-red-200'
-                : 'bg-amber-50 text-amber-700 border-amber-200'
-            }`}>
-              {isEmpty ? 'Empty' : 'Low Stock'}
-            </span>
-          </div>
+    <View style={[s.card, { borderColor }]}>
+      {/* Top: drawer info + edit/delete */}
+      <View style={[s.cardTop, { borderBottomColor: headerBorderColor }]}>
+        <View style={s.info}>
+          <Text style={s.drawerNum}>{drawerNumber}</Text>
+          <Text style={s.itemName} numberOfLines={1}>{itemName}</Text>
+          <Text style={s.sku}>{sku}</Text>
+        </View>
+        {(onEdit || onDelete) && (
+          <View style={s.topActions}>
+            {onEdit && (
+              <TouchableOpacity onPress={() => onEdit(drawer)} style={s.iconBtn}>
+                <Text style={s.iconBtnTxt}>✏️</Text>
+              </TouchableOpacity>
+            )}
+            {onDelete && (
+              <TouchableOpacity onPress={handleDelete} style={s.iconBtn}>
+                <Text style={s.iconBtnTxt}>🗑️</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
-      </div>
+      </View>
+
+      {/* Stats */}
+      <View style={s.stats}>
+        <View style={s.stat}>
+          <Text style={s.statLabel}>In Stock</Text>
+          <Text style={[s.statNum, { color: qtyColor }]}>{quantity}</Text>
+        </View>
+        <View style={s.statDivider} />
+        <View style={s.stat}>
+          <Text style={s.statLabel}>Taken</Text>
+          <Text style={[s.statNum, { color: colors.onSurface + '40' }]}>{taken}</Text>
+        </View>
+        {(isLow || isEmpty) && (
+          <View style={s.badgeWrap}>
+            <View style={[s.badge, isEmpty ? s.badgeEmpty : s.badgeLow]}>
+              <Text style={[s.badgeTxt, isEmpty ? s.badgeEmptyTxt : s.badgeLowTxt]}>
+                {isEmpty ? 'Empty' : 'Low Stock'}
+              </Text>
+            </View>
+          </View>
+        )}
+      </View>
 
       {/* Actions */}
-      <div className="px-4 pb-4 flex flex-col gap-2">
-        <button
-          onClick={handleTake}
+      <View style={s.actions}>
+        <TouchableOpacity
+          onPress={() => !isEmpty && onTake(id)}
           disabled={isEmpty}
-          className={`w-full py-3.5 rounded-xl font-display font-bold text-base transition-all duration-150 active:scale-95 select-none ${
-            isEmpty
-              ? 'bg-surface-container text-on-surface-variant cursor-not-allowed'
-              : 'bg-secondary text-white hover:bg-secondary/90 shadow-sm active:shadow-none cursor-pointer'
-          }`}
+          style={[s.takeBtn, isEmpty && s.takeBtnOff]}
+          activeOpacity={0.78}
         >
-          {isEmpty ? 'Out of Stock' : '− Take 1'}
-        </button>
+          <Text style={[s.takeTxt, isEmpty && s.takeTxtOff]}>
+            {isEmpty ? 'Out of Stock' : '− Take 1'}
+          </Text>
+        </TouchableOpacity>
 
         {!restocking ? (
-          <button
-            onClick={() => setRestocking(true)}
-            className="w-full py-2 rounded-xl text-sm font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors border border-outline-variant"
-          >
-            + Restock
-          </button>
+          <TouchableOpacity onPress={() => setRestocking(true)} style={s.restockBtn} activeOpacity={0.78}>
+            <Text style={s.restockTxt}>+ Restock</Text>
+          </TouchableOpacity>
         ) : (
-          <div className="flex gap-2">
-            <input
-              type="number"
+          <View style={s.restockRow}>
+            <TextInput
+              style={s.restockInput}
               value={restockAmount}
-              onChange={e => setRestockAmount(e.target.value)}
+              onChangeText={setRestockAmount}
               placeholder="Qty"
-              min="1"
+              placeholderTextColor={colors.onSurfaceVariant}
+              keyboardType="number-pad"
               autoFocus
-              onKeyDown={e => {
-                if (e.key === 'Enter') handleRestock()
-                if (e.key === 'Escape') { setRestocking(false); setRestockAmount('') }
-              }}
-              className="flex-1 border border-outline-variant rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/30 focus:border-secondary bg-surface"
+              returnKeyType="done"
+              onSubmitEditing={handleRestock}
             />
-            <button
-              onClick={handleRestock}
-              className="px-4 py-2 bg-secondary text-white rounded-xl text-sm font-semibold hover:bg-secondary/90 transition-colors"
-            >
-              Add
-            </button>
-            <button
-              onClick={() => { setRestocking(false); setRestockAmount('') }}
-              className="px-3 py-2 rounded-xl text-sm text-on-surface-variant hover:bg-surface-container transition-colors border border-outline-variant"
-            >
-              ✕
-            </button>
-          </div>
+            <TouchableOpacity onPress={handleRestock} style={s.restockAdd}>
+              <Text style={s.restockAddTxt}>Add</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { setRestocking(false); setRestockAmount('') }} style={s.restockCancel}>
+              <Text style={s.restockCancelTxt}>✕</Text>
+            </TouchableOpacity>
+          </View>
         )}
-      </div>
-    </div>
+      </View>
+    </View>
   )
 }
+
+const s = StyleSheet.create({
+  card: {
+    backgroundColor: colors.white, borderRadius: 18, borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#1f1b18', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+  },
+  cardTop: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+    padding: 16, borderBottomWidth: 1,
+  },
+  info: { flex: 1, marginRight: 8 },
+  drawerNum: { fontSize: 11, fontWeight: '700', color: colors.primary, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 3 },
+  itemName: { fontSize: 16, fontWeight: '600', color: colors.onSurface, marginBottom: 2 },
+  sku: { fontSize: 11, color: colors.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: 0.5 },
+  topActions: { flexDirection: 'row', gap: 6 },
+  iconBtn: { padding: 7, borderRadius: 9, backgroundColor: colors.surfaceContainerLow },
+  iconBtnTxt: { fontSize: 14 },
+
+  stats: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
+  stat: {},
+  statLabel: { fontSize: 11, fontWeight: '600', color: colors.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 },
+  statNum: { fontSize: 42, fontWeight: '700', lineHeight: 46 },
+  statDivider: { width: 1, height: 44, backgroundColor: colors.outlineVariant, marginHorizontal: 20 },
+  badgeWrap: { flex: 1, alignItems: 'flex-end' },
+  badge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
+  badgeEmpty: { backgroundColor: '#fef2f2', borderColor: '#fca5a5' },
+  badgeLow: { backgroundColor: '#fffbeb', borderColor: '#fcd34d' },
+  badgeTxt: { fontSize: 12, fontWeight: '600' },
+  badgeEmptyTxt: { color: '#dc2626' },
+  badgeLowTxt: { color: '#d97706' },
+
+  actions: { paddingHorizontal: 14, paddingBottom: 14, gap: 8 },
+  takeBtn: {
+    backgroundColor: colors.secondary, borderRadius: 14, paddingVertical: 17,
+    alignItems: 'center',
+    shadowColor: colors.secondary, shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2, shadowRadius: 6, elevation: 3,
+  },
+  takeBtnOff: { backgroundColor: colors.surfaceContainer, shadowOpacity: 0, elevation: 0 },
+  takeTxt: { color: colors.white, fontSize: 17, fontWeight: '700', letterSpacing: 0.3 },
+  takeTxtOff: { color: colors.onSurfaceVariant },
+
+  restockBtn: { borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: 14, paddingVertical: 13, alignItems: 'center' },
+  restockTxt: { color: colors.onSurfaceVariant, fontSize: 14, fontWeight: '600' },
+
+  restockRow: { flexDirection: 'row', gap: 8 },
+  restockInput: {
+    flex: 1, borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 11, fontSize: 15,
+    color: colors.onSurface, backgroundColor: colors.surfaceContainerLowest,
+  },
+  restockAdd: { backgroundColor: colors.secondary, borderRadius: 12, paddingHorizontal: 16, justifyContent: 'center' },
+  restockAddTxt: { color: colors.white, fontWeight: '700', fontSize: 14 },
+  restockCancel: { borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: 12, paddingHorizontal: 13, justifyContent: 'center' },
+  restockCancelTxt: { color: colors.onSurfaceVariant, fontSize: 14 },
+})
