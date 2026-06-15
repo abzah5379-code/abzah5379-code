@@ -44,30 +44,36 @@ export default function DrawerCard({ drawer, onTake, onRestock, onEdit, onDelete
             <h3 className="font-display font-semibold text-on-surface text-base leading-snug mt-0.5 truncate">{itemName}</h3>
             <p className="text-label text-on-surface-variant mt-0.5">{sku}</p>
           </div>
-          <div className="flex gap-1 shrink-0 mt-0.5">
-            <button
-              onClick={() => onEdit(drawer)}
-              className="text-on-surface-variant hover:text-on-surface p-1.5 rounded-lg hover:bg-surface-container transition-colors"
-              title="Edit"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>
-            </button>
-            <button
-              onClick={() => onDelete(id)}
-              className="text-on-surface-variant hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
-              title="Delete"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6l-1 14H6L5 6" />
-                <path d="M10 11v6M14 11v6" />
-                <path d="M9 6V4h6v2" />
-              </svg>
-            </button>
-          </div>
+          {(onEdit || onDelete) && (
+            <div className="flex gap-1 shrink-0 mt-0.5">
+              {onEdit && (
+                <button
+                  onClick={() => onEdit(drawer)}
+                  className="text-on-surface-variant hover:text-on-surface p-1.5 rounded-lg hover:bg-surface-container transition-colors"
+                  title="Edit"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  onClick={() => onDelete(id)}
+                  className="text-on-surface-variant hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                  title="Delete"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6l-1 14H6L5 6" />
+                    <path d="M10 11v6M14 11v6" />
+                    <path d="M9 6V4h6v2" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
