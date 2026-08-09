@@ -9,22 +9,6 @@ showCHoCH     = input.bool(true, "Show CHoCH", group=grpStruct)
 bullStructCol = input.color(color.new(color.teal, 0), "Bullish Structure", group=grpStruct)
 bearStructCol = input.color(color.new(color.red, 0), "Bearish Structure", group=grpStruct)
 
-grpOB = "Order Blocks"
-showOB    = input.bool(true, "Show Order Blocks", group=grpOB)
-obSearch  = input.int(15, "OB Search Range (bars back)", minval=3, maxval=50, group=grpOB)
-obMax     = input.int(15, "Max Order Blocks per Side", minval=1, maxval=50, group=grpOB)
-obBullCol = input.color(color.new(color.teal, 75), "Bullish OB", group=grpOB)
-obBearCol = input.color(color.new(color.red, 75), "Bearish OB", group=grpOB)
-obMitCol  = input.color(color.new(color.gray, 88), "Mitigated OB", group=grpOB)
-
-grpFVG = "Fair Value Gaps / Imbalance"
-showFVG    = input.bool(true, "Show FVG", group=grpFVG)
-fvgMinATR  = input.float(0.10, "Min Gap Size (x ATR14)", minval=0.0, step=0.05, group=grpFVG)
-fvgMax     = input.int(30, "Max FVGs per Side", minval=1, maxval=100, group=grpFVG)
-fvgBullCol = input.color(color.new(color.blue, 75), "Bullish FVG", group=grpFVG)
-fvgBearCol = input.color(color.new(color.orange, 75), "Bearish FVG", group=grpFVG)
-fvgFillCol = input.color(color.new(color.gray, 92), "Filled FVG", group=grpFVG)
-
 grpLQ = "Liquidity Sweeps"
 showLiquidity = input.bool(true, "Show Liquidity Sweeps", group=grpLQ)
 liqLen        = input.int(5, "Liquidity Pivot Length", minval=1, group=grpLQ)
@@ -38,9 +22,11 @@ eqTol  = input.float(0.10, "Tolerance (% of price)", minval=0.01, step=0.01, gro
 eqCol  = input.color(color.new(color.yellow, 0), "EQH/EQL Color", group=grpEQ)
 
 grpFib = "Fibonacci Retracement"
-showFib    = input.bool(true, "Show Auto Fibonacci (drawn on each new BOS/CHoCH leg)", group=grpFib)
-fibZoneCol = input.color(color.new(color.purple, 80), "0.71-0.75 Sniper Zone", group=grpFib)
-fibLineCol = input.color(color.new(color.gray, 40), "Fib Lines", group=grpFib)
+showFib     = input.bool(true, "Show Auto Fibonacci (drawn from the Fibonacci Timeframe structure)", group=grpFib)
+fibTF       = input.timeframe("15", "Fibonacci Timeframe", group=grpFib)
+fibZoneCol  = input.color(color.new(color.purple, 80), "0.71-0.75 Sniper Zone", group=grpFib)
+fibLineCol  = input.color(color.new(color.gray, 40), "Fib Lines", group=grpFib)
+fibTextCol  = input.color(color.gray, "Fib Level Labels", group=grpFib)
 
 grpVP = "Volume Profile"
 showVP     = input.bool(true, "Show Volume Profile (right-side, last bar only)", group=grpVP)
@@ -50,16 +36,17 @@ vpWidthPct = input.float(15, "Max Row Width (% of lookback bars)", minval=5, max
 vpPocCol   = input.color(color.new(color.yellow, 0), "POC Line", group=grpVP)
 vpBarCol   = input.color(color.new(color.aqua, 55), "Profile Bar Color", group=grpVP)
 
-grpDP = "Discount / Premium"
-showDP     = input.bool(true, "Show Discount/Premium Zone", group=grpDP)
-discountCol = input.color(color.new(color.teal, 82), "Discount Zone", group=grpDP)
-premiumCol  = input.color(color.new(color.red, 82), "Premium Zone", group=grpDP)
-
 grpDash = "Checklist Dashboard"
 showDash          = input.bool(true, "Show Dashboard", group=grpDash)
 htfInput          = input.timeframe("D", "Higher Timeframe (HTF Alignment)", group=grpDash)
 checklistLookback = input.int(20, "Checklist Recency (bars)", minval=1, maxval=200, group=grpDash)
 dashPositionInput = input.string("Top Right", "Dashboard Position", options=["Top Right", "Top Left", "Bottom Right", "Bottom Left"], group=grpDash)
+tableHeaderBgCol  = input.color(color.new(color.blue, 15), "Header Background", group=grpDash)
+tableTextCol      = input.color(color.white, "Text Color", group=grpDash)
+tableLabelCol     = input.color(color.gray, "Label Color", group=grpDash)
+tablePassCol      = input.color(color.lime, "Checklist Pass Color", group=grpDash)
+tableFailCol      = input.color(color.red, "Checklist Fail Color", group=grpDash)
+tableScoreCol     = input.color(color.yellow, "Trade Score Color", group=grpDash)
 
 // ───────────────────────────────────────────── HTF bias (for HTF Alignment check) ─────────────────────────────────────────────
 f_htfBias(len) =>
@@ -86,8 +73,32 @@ f_htfBias(len) =>
 
 htfBias = request.security(syminfo.tickerid, htfInput, f_htfBias(swingLen))
 
+// ───────────────────────────────────────────── 15m (or configurable) fib leg ─────────────────────────────────────────────
+f_fibLeg(len) =>
+    var float sHigh = na
+    var float sLow = na
+    var bool sHighBroken = true
+    var bool sLowBroken = true
+    fph = ta.pivothigh(len, len)
+    fpl = ta.pivotlow(len, len)
+    if not na(fph)
+        sHigh := fph
+        sHighBroken := false
+    if not na(fpl)
+        sLow := fpl
+        sLowBroken := false
+    dir = 0
+    if not na(sHigh) and not sHighBroken and close > sHigh
+        dir := 1
+        sHighBroken := true
+    if not na(sLow) and not sLowBroken and close < sLow
+        dir := -1
+        sLowBroken := true
+    [sHigh, sLow, dir]
+
+[fibHigh, fibLow, fibDir] = request.security(syminfo.tickerid, fibTF, f_fibLeg(swingLen))
+
 // ───────────────────────────────────────────── State ─────────────────────────────────────────────
-atrVal = ta.atr(14)
 
 // swing structure trackers
 var float swingHighPrice = na
@@ -97,14 +108,6 @@ var float swingLowPrice  = na
 var int   swingLowBar    = na
 var bool  swingLowBroken  = true
 var int   trendBias = 0   // 1 = bullish, -1 = bearish, 0 = neutral
-
-// order block storage
-var box[] bullOBBoxes = array.new<box>()
-var box[] bearOBBoxes = array.new<box>()
-
-// FVG storage
-var box[] bullFVGBoxes = array.new<box>()
-var box[] bearFVGBoxes = array.new<box>()
 
 // liquidity pivot storage
 var float[] pivotHighPrices = array.new<float>()
@@ -124,19 +127,13 @@ fibLevelsArr = array.from(0.0, 0.236, 0.382, 0.5, 0.618, 0.71, 0.75, 0.786, 1.0)
 var box[] vpBoxes = array.new<box>()
 var line  vpPocLine = na
 
-// discount/premium zone
-var box discountPremiumBox = na
-var label dpLabel = na
-
 // checklist recency trackers
 var int lastBullSweepBar = na
 var int lastBearSweepBar = na
-var int lastBullFVGBar = na
-var int lastBearFVGBar = na
 
 // dashboard table
 dashPos = dashPositionInput == "Top Right" ? position.top_right : dashPositionInput == "Top Left" ? position.top_left : dashPositionInput == "Bottom Right" ? position.bottom_right : position.bottom_left
-var table dashTable = table.new(dashPos, 2, 9, border_width=1, border_color=color.new(color.gray, 60))
+var table dashTable = table.new(dashPos, 2, 8, border_width=1, border_color=color.new(color.gray, 60))
 
 pivotBarIndex = bar_index - swingLen
 
@@ -164,8 +161,6 @@ if not na(pl)
 // ───────────────────────────────────────── BOS / CHoCH breakouts ─────────────────────────────────────────
 bullishBreakout = false
 bearishBreakout = false
-legLow = na(swingLowPrice) ? na : swingLowPrice
-legHigh = na(swingHighPrice) ? na : swingHighPrice
 
 if not na(swingHighPrice) and not swingHighBroken and close > swingHighPrice
     isCHoCH = trendBias < 0
@@ -184,86 +179,6 @@ if not na(swingLowPrice) and not swingLowBroken and close < swingLowPrice
     trendBias := -1
     swingLowBroken := true
     bearishBreakout := true
-
-// ───────────────────────────────────────── Order Blocks ─────────────────────────────────────────
-if showOB and bullishBreakout
-    obOffset = -1
-    for i = 1 to obSearch
-        if close[i] < open[i]
-            obOffset := i
-            break
-    if obOffset != -1
-        leftBar = bar_index - obOffset
-        newBox = box.new(leftBar, high[obOffset], bar_index + 50, low[obOffset], bgcolor=obBullCol, border_color=color.new(obBullCol, 0), extend=extend.right)
-        array.push(bullOBBoxes, newBox)
-        if array.size(bullOBBoxes) > obMax
-            box.delete(array.shift(bullOBBoxes))
-
-if showOB and bearishBreakout
-    obOffset = -1
-    for i = 1 to obSearch
-        if close[i] > open[i]
-            obOffset := i
-            break
-    if obOffset != -1
-        leftBar = bar_index - obOffset
-        newBox = box.new(leftBar, high[obOffset], bar_index + 50, low[obOffset], bgcolor=obBearCol, border_color=color.new(obBearCol, 0), extend=extend.right)
-        array.push(bearOBBoxes, newBox)
-        if array.size(bearOBBoxes) > obMax
-            box.delete(array.shift(bearOBBoxes))
-
-// mitigate order blocks once price trades back through them
-if showOB
-    if array.size(bullOBBoxes) > 0
-        for i = array.size(bullOBBoxes) - 1 to 0
-            id = array.get(bullOBBoxes, i)
-            if low <= box.get_bottom(id)
-                box.set_bgcolor(id, obMitCol)
-                box.set_border_color(id, color.new(obMitCol, 0))
-                box.set_extend(id, extend.none)
-                box.set_right(id, bar_index)
-                array.remove(bullOBBoxes, i)
-    if array.size(bearOBBoxes) > 0
-        for i = array.size(bearOBBoxes) - 1 to 0
-            id = array.get(bearOBBoxes, i)
-            if high >= box.get_top(id)
-                box.set_bgcolor(id, obMitCol)
-                box.set_border_color(id, color.new(obMitCol, 0))
-                box.set_extend(id, extend.none)
-                box.set_right(id, bar_index)
-                array.remove(bearOBBoxes, i)
-
-// ───────────────────────────────────────── Fair Value Gaps ─────────────────────────────────────────
-if showFVG
-    if low > high[2] and (low - high[2]) > fvgMinATR * atrVal
-        newBox = box.new(bar_index - 2, low, bar_index + 20, high[2], bgcolor=fvgBullCol, border_color=color.new(fvgBullCol, 0))
-        array.push(bullFVGBoxes, newBox)
-        lastBullFVGBar := bar_index
-        if array.size(bullFVGBoxes) > fvgMax
-            box.delete(array.shift(bullFVGBoxes))
-    if high < low[2] and (low[2] - high) > fvgMinATR * atrVal
-        newBox = box.new(bar_index - 2, low[2], bar_index + 20, high, bgcolor=fvgBearCol, border_color=color.new(fvgBearCol, 0))
-        array.push(bearFVGBoxes, newBox)
-        lastBearFVGBar := bar_index
-        if array.size(bearFVGBoxes) > fvgMax
-            box.delete(array.shift(bearFVGBoxes))
-
-    if array.size(bullFVGBoxes) > 0
-        for i = array.size(bullFVGBoxes) - 1 to 0
-            id = array.get(bullFVGBoxes, i)
-            if low <= box.get_bottom(id)
-                box.set_bgcolor(id, fvgFillCol)
-                box.set_border_color(id, color.new(fvgFillCol, 0))
-                box.set_right(id, bar_index)
-                array.remove(bullFVGBoxes, i)
-    if array.size(bearFVGBoxes) > 0
-        for i = array.size(bearFVGBoxes) - 1 to 0
-            id = array.get(bearFVGBoxes, i)
-            if high >= box.get_top(id)
-                box.set_bgcolor(id, fvgFillCol)
-                box.set_border_color(id, color.new(fvgFillCol, 0))
-                box.set_right(id, bar_index)
-                array.remove(bearFVGBoxes, i)
 
 // ───────────────────────────────────────── Liquidity Sweeps ─────────────────────────────────────────
 if showLiquidity
@@ -315,8 +230,9 @@ if showLiquidity
                 array.remove(pivotLowLines, i)
 
 // ───────────────────────────────────────── Fibonacci (0.71 / 0.75 sniper zone) ─────────────────────────────────────────
-// drawn on the impulse leg that just produced a BOS/CHoCH; 0.71-0.75 is highlighted as the entry zone
-if showFib and (bullishBreakout or bearishBreakout) and not na(legLow) and not na(legHigh)
+// drawn from the fibTF (default 15m) structure leg; 0.71-0.75 is highlighted as the entry zone.
+// Anchored at the current chart's bar since a lower-timeframe bar index can't be mapped onto this chart's bar series.
+if showFib and fibDir != 0 and not na(fibHigh) and not na(fibLow)
     if array.size(fibLines) > 0
         for i = array.size(fibLines) - 1 to 0
             line.delete(array.pop(fibLines))
@@ -327,16 +243,16 @@ if showFib and (bullishBreakout or bearishBreakout) and not na(legLow) and not n
         for i = array.size(fibZoneBoxArr) - 1 to 0
             box.delete(array.pop(fibZoneBoxArr))
 
-    legTop = legHigh
-    legBottom = legLow
-    fibLeftBar = bullishBreakout ? swingLowBar : swingHighBar
-    fibRightBar = bar_index + 30
+    legTop = fibHigh
+    legBottom = fibLow
+    fibLeftBar = bar_index
+    fibRightBar = bar_index + 40
 
     for i = 0 to array.size(fibLevelsArr) - 1
         lvl = array.get(fibLevelsArr, i)
         price = legTop - (legTop - legBottom) * lvl
         ln = line.new(fibLeftBar, price, fibRightBar, price, color=fibLineCol, style=line.style_dashed)
-        lbl = label.new(fibRightBar, price, str.tostring(lvl * 100, "#.#") + "%", style=label.style_label_left, color=color.new(color.gray, 100), textcolor=fibLineCol, size=size.tiny)
+        lbl = label.new(fibRightBar, price, str.tostring(lvl * 100, "#.#") + "%", style=label.style_label_left, color=color.new(color.gray, 100), textcolor=fibTextCol, size=size.tiny)
         array.push(fibLines, ln)
         array.push(fibLabels, lbl)
 
@@ -380,60 +296,39 @@ if showVP and barstate.islast and rangeHigh > rangeLow
     pocPrice = rangeLow + (pocIdx + 0.5) * binHeight
     vpPocLine := line.new(bar_index - vpLookback, pocPrice, bar_index + 2 + maxWidthBars, pocPrice, color=vpPocCol, width=2, style=line.style_dashed)
 
-// ───────────────────────────────────────── Discount / Premium Zone ─────────────────────────────────────────
-// equilibrium = midpoint of the active leg; below it price is "at a discount", above it "at a premium"
-if showDP and barstate.islast and not na(legHigh) and not na(legLow)
-    if not na(discountPremiumBox)
-        box.delete(discountPremiumBox)
-    if not na(dpLabel)
-        label.delete(dpLabel)
-    eqLevel = (legHigh + legLow) / 2
-    inDiscount = close < eqLevel
-    zoneTop = inDiscount ? eqLevel : legHigh
-    zoneBottom = inDiscount ? legLow : eqLevel
-    zoneCol = inDiscount ? discountCol : premiumCol
-    dpLeftBar = inDiscount ? swingLowBar : swingHighBar
-    discountPremiumBox := box.new(dpLeftBar, zoneTop, bar_index + 10, zoneBottom, bgcolor=zoneCol, border_color=color.new(zoneCol, 0))
-    dpLabel := label.new(bar_index + 10, (zoneTop + zoneBottom) / 2, inDiscount ? "Discount" : "Premium", style=label.style_label_left, color=color.new(zoneCol, 0), textcolor=color.white, size=size.small)
-
 // ───────────────────────────────────────── Checklist Dashboard ─────────────────────────────────────────
 if showDash and barstate.islast
     bosOk = trendBias != 0
     htfOk = trendBias != 0 and htfBias == trendBias
     sweepOk = trendBias == 1 ? (not na(lastBullSweepBar) and bar_index - lastBullSweepBar <= checklistLookback) : trendBias == -1 ? (not na(lastBearSweepBar) and bar_index - lastBearSweepBar <= checklistLookback) : false
-    fvgOk = trendBias == 1 ? (not na(lastBullFVGBar) and bar_index - lastBullFVGBar <= checklistLookback) : trendBias == -1 ? (not na(lastBearFVGBar) and bar_index - lastBearFVGBar <= checklistLookback) : false
-    checksPassed = (htfOk ? 1 : 0) + (bosOk ? 1 : 0) + (sweepOk ? 1 : 0) + (fvgOk ? 1 : 0)
-    tradeScore = math.round(checksPassed / 4.0 * 100)
+    checksPassed = (htfOk ? 1 : 0) + (bosOk ? 1 : 0) + (sweepOk ? 1 : 0)
+    tradeScore = math.round(checksPassed / 3.0 * 100)
     biasLabel = trendBias == 1 ? "BUY" : trendBias == -1 ? "SELL" : "NONE"
     biasColor = trendBias == 1 ? bullStructCol : trendBias == -1 ? bearStructCol : color.gray
-    dpText = not na(legHigh) and not na(legLow) ? (close < (legHigh + legLow) / 2 ? "Discount" : "Premium") : "—"
 
     table.merge_cells(dashTable, 0, 0, 1, 0)
-    table.cell(dashTable, 0, 0, "Currency Pros", text_color=color.white, bgcolor=color.new(color.blue, 15), text_size=size.normal)
+    table.cell(dashTable, 0, 0, "Currency Pros", text_color=tableTextCol, bgcolor=tableHeaderBgCol, text_size=size.normal)
 
-    table.cell(dashTable, 0, 1, "[TF]", text_color=color.gray, text_size=size.small)
-    table.cell(dashTable, 1, 1, timeframe.period, text_color=color.white, text_size=size.small)
+    table.cell(dashTable, 0, 1, "[TF]", text_color=tableLabelCol, text_size=size.small)
+    table.cell(dashTable, 1, 1, timeframe.period, text_color=tableTextCol, text_size=size.small)
 
     table.merge_cells(dashTable, 0, 2, 1, 2)
-    table.cell(dashTable, 0, 2, dpText + "  ·  " + biasLabel, bgcolor=color.new(biasColor, 30), text_color=color.white, text_size=size.small)
+    table.cell(dashTable, 0, 2, "Bias: " + biasLabel, bgcolor=color.new(biasColor, 30), text_color=tableTextCol, text_size=size.small)
 
     table.merge_cells(dashTable, 0, 3, 1, 3)
-    table.cell(dashTable, 0, 3, "Checklist", text_color=color.gray, text_size=size.small)
+    table.cell(dashTable, 0, 3, "Checklist", text_color=tableLabelCol, text_size=size.small)
 
-    table.cell(dashTable, 0, 4, "HTF Alignment", text_color=color.white, text_size=size.small)
-    table.cell(dashTable, 1, 4, htfOk ? "✓" : "✗", text_color=htfOk ? color.lime : color.red, text_size=size.small)
+    table.cell(dashTable, 0, 4, "HTF Alignment", text_color=tableTextCol, text_size=size.small)
+    table.cell(dashTable, 1, 4, htfOk ? "✓" : "✗", text_color=htfOk ? tablePassCol : tableFailCol, text_size=size.small)
 
-    table.cell(dashTable, 0, 5, "Break of Structure", text_color=color.white, text_size=size.small)
-    table.cell(dashTable, 1, 5, bosOk ? "✓" : "✗", text_color=bosOk ? color.lime : color.red, text_size=size.small)
+    table.cell(dashTable, 0, 5, "Break of Structure", text_color=tableTextCol, text_size=size.small)
+    table.cell(dashTable, 1, 5, bosOk ? "✓" : "✗", text_color=bosOk ? tablePassCol : tableFailCol, text_size=size.small)
 
-    table.cell(dashTable, 0, 6, "Liquidity Sweep", text_color=color.white, text_size=size.small)
-    table.cell(dashTable, 1, 6, sweepOk ? "✓" : "✗", text_color=sweepOk ? color.lime : color.red, text_size=size.small)
+    table.cell(dashTable, 0, 6, "Liquidity Sweep", text_color=tableTextCol, text_size=size.small)
+    table.cell(dashTable, 1, 6, sweepOk ? "✓" : "✗", text_color=sweepOk ? tablePassCol : tableFailCol, text_size=size.small)
 
-    table.cell(dashTable, 0, 7, "Imbalance", text_color=color.white, text_size=size.small)
-    table.cell(dashTable, 1, 7, fvgOk ? "✓" : "✗", text_color=fvgOk ? color.lime : color.red, text_size=size.small)
-
-    table.cell(dashTable, 0, 8, "Trade Score", text_color=color.gray, text_size=size.small)
-    table.cell(dashTable, 1, 8, str.tostring(tradeScore), text_color=color.yellow, text_size=size.small)
+    table.cell(dashTable, 0, 7, "Trade Score", text_color=tableLabelCol, text_size=size.small)
+    table.cell(dashTable, 1, 7, str.tostring(tradeScore), text_color=tableScoreCol, text_size=size.small)
 
 // ───────────────────────────────────────── Alerts ─────────────────────────────────────────
 alertcondition(bullishBreakout, title="Bullish BOS/CHoCH", message="Currency Pros: bullish structure break")
