@@ -5,7 +5,7 @@ A TradingView Pine Script v6 indicator for currency-pair chart analysis. Plots:
 - **Market structure** — automatic BOS (break of structure) and CHoCH (change of character) labels from swing-based higher-high/lower-low detection.
 - **Liquidity sweeps** — wicks that run past a prior swing high/low and close back on the other side (stop hunts), marked with an "LQ" label.
 - **Equal highs / equal lows** — clusters of swing points within a tolerance %, connected with a line and labeled EQH/EQL.
-- **Fibonacci retracement** — auto-drawn from the structure of a separate, configurable **Fibonacci Timeframe** (default 15m) regardless of what timeframe the chart itself is on, with the **0.71–0.75 zone highlighted** as the entry/"sniper" zone. Colors for the zone, the level lines, and the level labels are all configurable.
+- **Fibonacci retracement** — stretched between **BSL** (buy-side liquidity, the last confirmed swing high) and **SSL** (sell-side liquidity, the last confirmed swing low) on a separate, configurable **Fibonacci Timeframe** (default 15m), regardless of what timeframe the chart itself is on. Redraws whenever a new BSL or SSL forms. The **0.71–0.75 zone** is highlighted as the entry/"sniper" zone. Colors for the zone, the level lines, and the level labels are all configurable.
 - **Volume profile** — a right-side horizontal histogram over a rolling lookback window, with the POC (point of control) row/line highlighted.
 - **Checklist dashboard** — an on-chart, fully recolorable table (title, current timeframe, bias) plus a 3-item confluence checklist (HTF Alignment, Break of Structure, Liquidity Sweep) and a computed **Trade Score** (% of checklist items currently satisfied).
 
@@ -23,7 +23,7 @@ Market Structure, Liquidity Sweeps, Equal Highs/Lows, Fibonacci Retracement, Vol
 
 - `Swing Length` — sensitivity of the structure/pivot detection (lower = more signals).
 - `Tolerance (% of price)` — how close two swing points must be to count as equal highs/lows.
-- `Fibonacci Timeframe` — the timeframe whose swing structure drives the auto fib (default `15`, i.e. 15 minutes), independent of the chart's own timeframe.
+- `Fibonacci Timeframe` — the timeframe whose swing structure defines BSL/SSL for the auto fib (default `15`, i.e. 15 minutes), independent of the chart's own timeframe.
 - Volume profile `Lookback Bars` / `Number of Rows` — resolution of the histogram (recomputed on the last bar only, for performance).
 - `Higher Timeframe (HTF Alignment)` — the timeframe checked against the current chart's bias for the dashboard's HTF Alignment row (default Daily).
 - `Checklist Recency (bars)` — how many bars back a Liquidity Sweep must have occurred (in the direction of the current bias) to still count as satisfied.
@@ -44,6 +44,6 @@ Once a BOS/CHoCH establishes a bias (BUY/SELL), the dashboard scores three confl
 
 - Works on any symbol/timeframe TradingView supports, including forex pairs.
 - The volume profile uses each bar's midpoint price weighted by that bar's reported volume; for FX symbols without real volume, TradingView substitutes tick volume, which is a reasonable proxy but not true traded volume.
-- The HTF Alignment check, and the Fibonacci Timeframe fib, both use `request.security` and can shift slightly until the underlying higher/lower-timeframe bar closes — normal behavior for any multi-timeframe confluence check, not a bug.
-- The fib box/lines are anchored at the current chart's bar when a new Fibonacci-Timeframe leg is detected (a lower-timeframe bar index can't be mapped exactly onto the chart's own bar series), so they read as a forward-projected zone rather than a historical overlay spanning the original leg.
+- The HTF Alignment check, and the BSL/SSL fib, both use `request.security` and can shift slightly until the underlying higher/lower-timeframe bar closes — normal behavior for any multi-timeframe confluence check, not a bug.
+- The fib's left/right edges are anchored at the current chart's bars where BSL and SSL were last confirmed (a Fibonacci-Timeframe bar index can't be mapped exactly onto the chart's own bar series otherwise), and the right edge always extends to at least the current bar so the zone stays visible even if BSL/SSL haven't updated recently.
 - Alerts are wired for bullish/bearish BOS/CHoCH — set them up via TradingView's Alert dialog referencing "Currency Pros - Smart Money Concepts".

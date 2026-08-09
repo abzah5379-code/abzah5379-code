@@ -73,30 +73,20 @@ f_htfBias(len) =>
 
 htfBias = request.security(syminfo.tickerid, htfInput, f_htfBias(swingLen))
 
-// ───────────────────────────────────────────── 15m (or configurable) fib leg ─────────────────────────────────────────────
+// ───────────────────────────────────────────── BSL / SSL (fib timeframe swing high/low) ─────────────────────────────────────────────
 f_fibLeg(len) =>
     var float sHigh = na
     var float sLow = na
-    var bool sHighBroken = true
-    var bool sLowBroken = true
     fph = ta.pivothigh(len, len)
     fpl = ta.pivotlow(len, len)
     if not na(fph)
         sHigh := fph
-        sHighBroken := false
     if not na(fpl)
         sLow := fpl
-        sLowBroken := false
-    dir = 0
-    if not na(sHigh) and not sHighBroken and close > sHigh
-        dir := 1
-        sHighBroken := true
-    if not na(sLow) and not sLowBroken and close < sLow
-        dir := -1
-        sLowBroken := true
-    [sHigh, sLow, dir]
+    [sHigh, sLow]
 
-[fibHigh, fibLow, fibDir] = request.security(syminfo.tickerid, fibTF, f_fibLeg(swingLen))
+// bsl = buy-side liquidity resting above the last fibTF swing high, ssl = sell-side liquidity below the last fibTF swing low
+[bsl, ssl] = request.security(syminfo.tickerid, fibTF, f_fibLeg(swingLen))
 
 // ───────────────────────────────────────────── State ─────────────────────────────────────────────
 
@@ -117,11 +107,25 @@ var float[] pivotLowPrices  = array.new<float>()
 var int[]   pivotLowBars    = array.new<int>()
 var line[]  pivotLowLines   = array.new<line>()
 
-// fibonacci storage (redrawn on each new confirmed leg)
+// fibonacci storage (redrawn whenever BSL or SSL updates)
 var line[]  fibLines    = array.new<line>()
 var label[] fibLabels   = array.new<label>()
 var box[]   fibZoneBoxArr = array.new<box>()
 fibLevelsArr = array.from(0.0, 0.236, 0.382, 0.5, 0.618, 0.71, 0.75, 0.786, 1.0)
+
+// bsl/ssl anchor bars, tracked on the current chart's own bar index (bar where the value last changed)
+var int   bslBar = na
+var float bslSeen = na
+var int   sslBar = na
+var float sslSeen = na
+bslUpdated = not na(bsl) and (na(bslSeen) or bsl != bslSeen)
+if bslUpdated
+    bslBar := bar_index
+    bslSeen := bsl
+sslUpdated = not na(ssl) and (na(sslSeen) or ssl != sslSeen)
+if sslUpdated
+    sslBar := bar_index
+    sslSeen := ssl
 
 // volume profile storage
 var box[] vpBoxes = array.new<box>()
@@ -229,10 +233,10 @@ if showLiquidity
                 array.remove(pivotLowBars, i)
                 array.remove(pivotLowLines, i)
 
-// ───────────────────────────────────────── Fibonacci (0.71 / 0.75 sniper zone) ─────────────────────────────────────────
-// drawn from the fibTF (default 15m) structure leg; 0.71-0.75 is highlighted as the entry zone.
-// Anchored at the current chart's bar since a lower-timeframe bar index can't be mapped onto this chart's bar series.
-if showFib and fibDir != 0 and not na(fibHigh) and not na(fibLow)
+// ───────────────────────────────────────── Fibonacci (BSL → SSL, 0.71 / 0.75 sniper zone) ─────────────────────────────────────────
+// stretched between the bars (on the current chart) where the fibTF's BSL and SSL were last confirmed;
+// redrawn whenever either one updates. 0.71-0.75 is highlighted as the entry zone.
+if showFib and (bslUpdated or sslUpdated) and not na(bslSeen) and not na(sslSeen)
     if array.size(fibLines) > 0
         for i = array.size(fibLines) - 1 to 0
             line.delete(array.pop(fibLines))
@@ -243,10 +247,10 @@ if showFib and fibDir != 0 and not na(fibHigh) and not na(fibLow)
         for i = array.size(fibZoneBoxArr) - 1 to 0
             box.delete(array.pop(fibZoneBoxArr))
 
-    legTop = fibHigh
-    legBottom = fibLow
-    fibLeftBar = bar_index
-    fibRightBar = bar_index + 40
+    legTop = bslSeen
+    legBottom = sslSeen
+    fibLeftBar = math.min(bslBar, sslBar)
+    fibRightBar = math.max(bar_index, math.max(bslBar, sslBar)) + 10
 
     for i = 0 to array.size(fibLevelsArr) - 1
         lvl = array.get(fibLevelsArr, i)
