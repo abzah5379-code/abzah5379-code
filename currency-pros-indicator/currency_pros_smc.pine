@@ -1,0 +1,339 @@
+//@version=6
+indicator("Currency Pros - Smart Money Concepts", shorttitle="CurrPros", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+
+// ───────────────────────────────────────────── Inputs ─────────────────────────────────────────────
+grpStruct = "Market Structure (BOS / CHoCH)"
+swingLen      = input.int(5, "Swing Length", minval=1, group=grpStruct)
+showBOS       = input.bool(true, "Show BOS", group=grpStruct)
+showCHoCH     = input.bool(true, "Show CHoCH", group=grpStruct)
+bullStructCol = input.color(color.new(color.teal, 0), "Bullish Structure", group=grpStruct)
+bearStructCol = input.color(color.new(color.red, 0), "Bearish Structure", group=grpStruct)
+
+grpLQ = "Liquidity Sweeps"
+showLiquidity = input.bool(true, "Show Liquidity Sweeps", group=grpLQ)
+liqLen        = input.int(5, "Liquidity Pivot Length", minval=1, group=grpLQ)
+liqMaxStore   = input.int(20, "Max Tracked Liquidity Levels", minval=5, maxval=50, group=grpLQ)
+liqBullCol    = input.color(color.new(color.lime, 0), "Bullish Sweep (of lows)", group=grpLQ)
+liqBearCol    = input.color(color.new(color.fuchsia, 0), "Bearish Sweep (of highs)", group=grpLQ)
+
+grpEQ = "Equal Highs / Lows"
+showEQ = input.bool(true, "Show Equal Highs/Lows", group=grpEQ)
+eqTol  = input.float(0.10, "Tolerance (% of price)", minval=0.01, step=0.01, group=grpEQ)
+eqCol  = input.color(color.new(color.yellow, 0), "EQH/EQL Color", group=grpEQ)
+
+grpFib = "Fibonacci Retracement"
+showFib     = input.bool(true, "Show Auto Fibonacci (drawn from the Fibonacci Timeframe structure)", group=grpFib)
+fibTF       = input.timeframe("15", "Fibonacci Timeframe", group=grpFib)
+fibZoneCol  = input.color(color.new(color.purple, 80), "0.71-0.75 Sniper Zone", group=grpFib)
+fibLineCol  = input.color(color.new(color.gray, 40), "Fib Lines", group=grpFib)
+fibTextCol  = input.color(color.gray, "Fib Level Labels", group=grpFib)
+
+grpVP = "Volume Profile"
+showVP     = input.bool(true, "Show Volume Profile (right-side, last bar only)", group=grpVP)
+vpLookback = input.int(150, "Lookback Bars", minval=20, maxval=500, group=grpVP)
+vpRows     = input.int(24, "Number of Rows", minval=10, maxval=100, group=grpVP)
+vpWidthPct = input.float(15, "Max Row Width (% of lookback bars)", minval=5, maxval=50, group=grpVP)
+vpPocCol   = input.color(color.new(color.yellow, 0), "POC Line", group=grpVP)
+vpBarCol   = input.color(color.new(color.aqua, 55), "Profile Bar Color", group=grpVP)
+
+grpDash = "Checklist Dashboard"
+showDash          = input.bool(true, "Show Dashboard", group=grpDash)
+htfInput          = input.timeframe("D", "Higher Timeframe (HTF Alignment)", group=grpDash)
+checklistLookback = input.int(20, "Checklist Recency (bars)", minval=1, maxval=200, group=grpDash)
+dashPositionInput = input.string("Top Right", "Dashboard Position", options=["Top Right", "Top Left", "Bottom Right", "Bottom Left"], group=grpDash)
+tableHeaderBgCol  = input.color(color.new(color.blue, 15), "Header Background", group=grpDash)
+tableTextCol      = input.color(color.white, "Text Color", group=grpDash)
+tableLabelCol     = input.color(color.gray, "Label Color", group=grpDash)
+tablePassCol      = input.color(color.lime, "Checklist Pass Color", group=grpDash)
+tableFailCol      = input.color(color.red, "Checklist Fail Color", group=grpDash)
+tableScoreCol     = input.color(color.yellow, "Trade Score Color", group=grpDash)
+
+// ───────────────────────────────────────────── HTF bias (for HTF Alignment check) ─────────────────────────────────────────────
+f_htfBias(len) =>
+    var float hSwingHigh = na
+    var float hSwingLow = na
+    var bool hHighBroken = true
+    var bool hLowBroken = true
+    var int hBias = 0
+    hph = ta.pivothigh(len, len)
+    hpl = ta.pivotlow(len, len)
+    if not na(hph)
+        hSwingHigh := hph
+        hHighBroken := false
+    if not na(hpl)
+        hSwingLow := hpl
+        hLowBroken := false
+    if not na(hSwingHigh) and not hHighBroken and close > hSwingHigh
+        hBias := 1
+        hHighBroken := true
+    if not na(hSwingLow) and not hLowBroken and close < hSwingLow
+        hBias := -1
+        hLowBroken := true
+    hBias
+
+htfBias = request.security(syminfo.tickerid, htfInput, f_htfBias(swingLen))
+
+// ───────────────────────────────────────────── BSL / SSL (fib timeframe swing high/low) ─────────────────────────────────────────────
+f_fibLeg(len) =>
+    var float sHigh = na
+    var float sLow = na
+    fph = ta.pivothigh(len, len)
+    fpl = ta.pivotlow(len, len)
+    if not na(fph)
+        sHigh := fph
+    if not na(fpl)
+        sLow := fpl
+    [sHigh, sLow]
+
+// bsl = buy-side liquidity resting above the last fibTF swing high, ssl = sell-side liquidity below the last fibTF swing low
+[bsl, ssl] = request.security(syminfo.tickerid, fibTF, f_fibLeg(swingLen))
+
+// ───────────────────────────────────────────── State ─────────────────────────────────────────────
+
+// swing structure trackers
+var float swingHighPrice = na
+var int   swingHighBar   = na
+var bool  swingHighBroken = true
+var float swingLowPrice  = na
+var int   swingLowBar    = na
+var bool  swingLowBroken  = true
+var int   trendBias = 0   // 1 = bullish, -1 = bearish, 0 = neutral
+
+// liquidity pivot storage
+var float[] pivotHighPrices = array.new<float>()
+var int[]   pivotHighBars   = array.new<int>()
+var line[]  pivotHighLines  = array.new<line>()
+var float[] pivotLowPrices  = array.new<float>()
+var int[]   pivotLowBars    = array.new<int>()
+var line[]  pivotLowLines   = array.new<line>()
+
+// fibonacci storage (redrawn whenever BSL or SSL updates)
+var line[]  fibLines    = array.new<line>()
+var label[] fibLabels   = array.new<label>()
+var box[]   fibZoneBoxArr = array.new<box>()
+fibLevelsArr = array.from(0.0, 0.236, 0.382, 0.5, 0.618, 0.71, 0.75, 0.786, 1.0)
+
+// bsl/ssl anchor bars, tracked on the current chart's own bar index (bar where the value last changed)
+var int   bslBar = na
+var float bslSeen = na
+var int   sslBar = na
+var float sslSeen = na
+bslUpdated = not na(bsl) and (na(bslSeen) or bsl != bslSeen)
+if bslUpdated
+    bslBar := bar_index
+    bslSeen := bsl
+sslUpdated = not na(ssl) and (na(sslSeen) or ssl != sslSeen)
+if sslUpdated
+    sslBar := bar_index
+    sslSeen := ssl
+
+// volume profile storage
+var box[] vpBoxes = array.new<box>()
+var line  vpPocLine = na
+
+// checklist recency trackers
+var int lastBullSweepBar = na
+var int lastBearSweepBar = na
+
+// dashboard table
+dashPos = dashPositionInput == "Top Right" ? position.top_right : dashPositionInput == "Top Left" ? position.top_left : dashPositionInput == "Bottom Right" ? position.bottom_right : position.bottom_left
+var table dashTable = table.new(dashPos, 2, 8, border_width=1, border_color=color.new(color.gray, 60))
+
+pivotBarIndex = bar_index - swingLen
+
+// ───────────────────────────────────────── Swing pivots + EQH/EQL ─────────────────────────────────────────
+ph = ta.pivothigh(swingLen, swingLen)
+pl = ta.pivotlow(swingLen, swingLen)
+
+if not na(ph)
+    // an equal-high cluster is two swing highs within tolerance of each other -> resting liquidity
+    if showEQ and not na(swingHighPrice) and math.abs(ph - swingHighPrice) <= swingHighPrice * eqTol / 100
+        line.new(swingHighBar, swingHighPrice, pivotBarIndex, ph, color=eqCol, width=1)
+        label.new(int(math.avg(swingHighBar, pivotBarIndex)), math.max(ph, swingHighPrice), "EQH", style=label.style_label_down, color=color.new(eqCol, 100), textcolor=eqCol, size=size.tiny)
+    swingHighPrice := ph
+    swingHighBar := pivotBarIndex
+    swingHighBroken := false
+
+if not na(pl)
+    if showEQ and not na(swingLowPrice) and math.abs(pl - swingLowPrice) <= swingLowPrice * eqTol / 100
+        line.new(swingLowBar, swingLowPrice, pivotBarIndex, pl, color=eqCol, width=1)
+        label.new(int(math.avg(swingLowBar, pivotBarIndex)), math.min(pl, swingLowPrice), "EQL", style=label.style_label_up, color=color.new(eqCol, 100), textcolor=eqCol, size=size.tiny)
+    swingLowPrice := pl
+    swingLowBar := pivotBarIndex
+    swingLowBroken := false
+
+// ───────────────────────────────────────── BOS / CHoCH breakouts ─────────────────────────────────────────
+bullishBreakout = false
+bearishBreakout = false
+
+if not na(swingHighPrice) and not swingHighBroken and close > swingHighPrice
+    isCHoCH = trendBias < 0
+    if (isCHoCH and showCHoCH) or (not isCHoCH and showBOS)
+        label.new(bar_index, swingHighPrice, isCHoCH ? "CHoCH" : "BOS", style=label.style_label_down, color=bullStructCol, textcolor=color.white, size=size.small)
+        line.new(swingHighBar, swingHighPrice, bar_index, swingHighPrice, color=bullStructCol, width=1)
+    trendBias := 1
+    swingHighBroken := true
+    bullishBreakout := true
+
+if not na(swingLowPrice) and not swingLowBroken and close < swingLowPrice
+    isCHoCH = trendBias > 0
+    if (isCHoCH and showCHoCH) or (not isCHoCH and showBOS)
+        label.new(bar_index, swingLowPrice, isCHoCH ? "CHoCH" : "BOS", style=label.style_label_up, color=bearStructCol, textcolor=color.white, size=size.small)
+        line.new(swingLowBar, swingLowPrice, bar_index, swingLowPrice, color=bearStructCol, width=1)
+    trendBias := -1
+    swingLowBroken := true
+    bearishBreakout := true
+
+// ───────────────────────────────────────── Liquidity Sweeps ─────────────────────────────────────────
+if showLiquidity
+    lqPH = ta.pivothigh(liqLen, liqLen)
+    lqPL = ta.pivotlow(liqLen, liqLen)
+    lqPivotBar = bar_index - liqLen
+
+    if not na(lqPH)
+        ln = line.new(lqPivotBar, lqPH, bar_index, lqPH, extend=extend.right, color=color.new(color.gray, 50), style=line.style_dotted)
+        array.push(pivotHighPrices, lqPH)
+        array.push(pivotHighBars, lqPivotBar)
+        array.push(pivotHighLines, ln)
+        if array.size(pivotHighPrices) > liqMaxStore
+            array.shift(pivotHighPrices)
+            array.shift(pivotHighBars)
+            line.delete(array.shift(pivotHighLines))
+
+    if not na(lqPL)
+        ln = line.new(lqPivotBar, lqPL, bar_index, lqPL, extend=extend.right, color=color.new(color.gray, 50), style=line.style_dotted)
+        array.push(pivotLowPrices, lqPL)
+        array.push(pivotLowBars, lqPivotBar)
+        array.push(pivotLowLines, ln)
+        if array.size(pivotLowPrices) > liqMaxStore
+            array.shift(pivotLowPrices)
+            array.shift(pivotLowBars)
+            line.delete(array.shift(pivotLowLines))
+
+    // a sweep = wick trades through a resting level then closes back on the other side (stop hunt)
+    if array.size(pivotHighPrices) > 0
+        for i = array.size(pivotHighPrices) - 1 to 0
+            p = array.get(pivotHighPrices, i)
+            if high > p and close < p
+                line.delete(array.get(pivotHighLines, i))
+                label.new(bar_index, high, "LQ", style=label.style_label_down, color=liqBearCol, textcolor=color.white, size=size.tiny)
+                lastBearSweepBar := bar_index
+                array.remove(pivotHighPrices, i)
+                array.remove(pivotHighBars, i)
+                array.remove(pivotHighLines, i)
+
+    if array.size(pivotLowPrices) > 0
+        for i = array.size(pivotLowPrices) - 1 to 0
+            p = array.get(pivotLowPrices, i)
+            if low < p and close > p
+                line.delete(array.get(pivotLowLines, i))
+                label.new(bar_index, low, "LQ", style=label.style_label_up, color=liqBullCol, textcolor=color.white, size=size.tiny)
+                lastBullSweepBar := bar_index
+                array.remove(pivotLowPrices, i)
+                array.remove(pivotLowBars, i)
+                array.remove(pivotLowLines, i)
+
+// ───────────────────────────────────────── Fibonacci (BSL → SSL, 0.71 / 0.75 sniper zone) ─────────────────────────────────────────
+// stretched between the bars (on the current chart) where the fibTF's BSL and SSL were last confirmed;
+// redrawn whenever either one updates. 0.71-0.75 is highlighted as the entry zone.
+if showFib and (bslUpdated or sslUpdated) and not na(bslSeen) and not na(sslSeen)
+    if array.size(fibLines) > 0
+        for i = array.size(fibLines) - 1 to 0
+            line.delete(array.pop(fibLines))
+    if array.size(fibLabels) > 0
+        for i = array.size(fibLabels) - 1 to 0
+            label.delete(array.pop(fibLabels))
+    if array.size(fibZoneBoxArr) > 0
+        for i = array.size(fibZoneBoxArr) - 1 to 0
+            box.delete(array.pop(fibZoneBoxArr))
+
+    legTop = bslSeen
+    legBottom = sslSeen
+    fibLeftBar = math.min(bslBar, sslBar)
+    fibRightBar = math.max(bar_index, math.max(bslBar, sslBar)) + 10
+
+    for i = 0 to array.size(fibLevelsArr) - 1
+        lvl = array.get(fibLevelsArr, i)
+        price = legTop - (legTop - legBottom) * lvl
+        ln = line.new(fibLeftBar, price, fibRightBar, price, color=fibLineCol, style=line.style_dashed)
+        lbl = label.new(fibRightBar, price, str.tostring(lvl * 100, "#.#") + "%", style=label.style_label_left, color=color.new(color.gray, 100), textcolor=fibTextCol, size=size.tiny)
+        array.push(fibLines, ln)
+        array.push(fibLabels, lbl)
+
+    zoneA = legTop - (legTop - legBottom) * 0.71
+    zoneB = legTop - (legTop - legBottom) * 0.75
+    newZoneBox = box.new(fibLeftBar, math.max(zoneA, zoneB), fibRightBar, math.min(zoneA, zoneB), bgcolor=fibZoneCol, border_color=color.new(fibZoneCol, 0))
+    array.push(fibZoneBoxArr, newZoneBox)
+
+// ───────────────────────────────────────── Volume Profile ─────────────────────────────────────────
+rangeHigh = ta.highest(high, vpLookback)
+rangeLow = ta.lowest(low, vpLookback)
+
+if showVP and barstate.islast and rangeHigh > rangeLow
+    if array.size(vpBoxes) > 0
+        for i = array.size(vpBoxes) - 1 to 0
+            box.delete(array.pop(vpBoxes))
+    if not na(vpPocLine)
+        line.delete(vpPocLine)
+
+    binVolumes = array.new<float>(vpRows, 0.0)
+    for i = 0 to vpLookback - 1
+        typicalPrice = (high[i] + low[i]) / 2
+        binIdx = int(math.min(vpRows - 1, math.floor((typicalPrice - rangeLow) / (rangeHigh - rangeLow) * vpRows)))
+        array.set(binVolumes, binIdx, array.get(binVolumes, binIdx) + volume[i])
+
+    maxVol = array.max(binVolumes)
+    pocIdx = array.indexof(binVolumes, maxVol)
+    maxWidthBars = math.round(vpLookback * vpWidthPct / 100)
+    binHeight = (rangeHigh - rangeLow) / vpRows
+
+    for i = 0 to vpRows - 1
+        vol = array.get(binVolumes, i)
+        if vol > 0
+            widthBars = math.max(1, math.round(vol / maxVol * maxWidthBars))
+            rowBottom = rangeLow + i * binHeight
+            rowTop = rowBottom + binHeight
+            col = i == pocIdx ? color.new(vpPocCol, 20) : vpBarCol
+            vBox = box.new(bar_index + 2, rowTop, bar_index + 2 + widthBars, rowBottom, bgcolor=col, border_color=col)
+            array.push(vpBoxes, vBox)
+
+    pocPrice = rangeLow + (pocIdx + 0.5) * binHeight
+    vpPocLine := line.new(bar_index - vpLookback, pocPrice, bar_index + 2 + maxWidthBars, pocPrice, color=vpPocCol, width=2, style=line.style_dashed)
+
+// ───────────────────────────────────────── Checklist Dashboard ─────────────────────────────────────────
+if showDash and barstate.islast
+    bosOk = trendBias != 0
+    htfOk = trendBias != 0 and htfBias == trendBias
+    sweepOk = trendBias == 1 ? (not na(lastBullSweepBar) and bar_index - lastBullSweepBar <= checklistLookback) : trendBias == -1 ? (not na(lastBearSweepBar) and bar_index - lastBearSweepBar <= checklistLookback) : false
+    checksPassed = (htfOk ? 1 : 0) + (bosOk ? 1 : 0) + (sweepOk ? 1 : 0)
+    tradeScore = math.round(checksPassed / 3.0 * 100)
+    biasLabel = trendBias == 1 ? "BUY" : trendBias == -1 ? "SELL" : "NONE"
+    biasColor = trendBias == 1 ? bullStructCol : trendBias == -1 ? bearStructCol : color.gray
+
+    table.merge_cells(dashTable, 0, 0, 1, 0)
+    table.cell(dashTable, 0, 0, "Currency Pros", text_color=tableTextCol, bgcolor=tableHeaderBgCol, text_size=size.normal)
+
+    table.cell(dashTable, 0, 1, "[TF]", text_color=tableLabelCol, text_size=size.small)
+    table.cell(dashTable, 1, 1, timeframe.period, text_color=tableTextCol, text_size=size.small)
+
+    table.merge_cells(dashTable, 0, 2, 1, 2)
+    table.cell(dashTable, 0, 2, "Bias: " + biasLabel, bgcolor=color.new(biasColor, 30), text_color=tableTextCol, text_size=size.small)
+
+    table.merge_cells(dashTable, 0, 3, 1, 3)
+    table.cell(dashTable, 0, 3, "Checklist", text_color=tableLabelCol, text_size=size.small)
+
+    table.cell(dashTable, 0, 4, "HTF Alignment", text_color=tableTextCol, text_size=size.small)
+    table.cell(dashTable, 1, 4, htfOk ? "✓" : "✗", text_color=htfOk ? tablePassCol : tableFailCol, text_size=size.small)
+
+    table.cell(dashTable, 0, 5, "Break of Structure", text_color=tableTextCol, text_size=size.small)
+    table.cell(dashTable, 1, 5, bosOk ? "✓" : "✗", text_color=bosOk ? tablePassCol : tableFailCol, text_size=size.small)
+
+    table.cell(dashTable, 0, 6, "Liquidity Sweep", text_color=tableTextCol, text_size=size.small)
+    table.cell(dashTable, 1, 6, sweepOk ? "✓" : "✗", text_color=sweepOk ? tablePassCol : tableFailCol, text_size=size.small)
+
+    table.cell(dashTable, 0, 7, "Trade Score", text_color=tableLabelCol, text_size=size.small)
+    table.cell(dashTable, 1, 7, str.tostring(tradeScore), text_color=tableScoreCol, text_size=size.small)
+
+// ───────────────────────────────────────── Alerts ─────────────────────────────────────────
+alertcondition(bullishBreakout, title="Bullish BOS/CHoCH", message="Currency Pros: bullish structure break")
+alertcondition(bearishBreakout, title="Bearish BOS/CHoCH", message="Currency Pros: bearish structure break")
