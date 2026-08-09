@@ -1,5 +1,5 @@
-//@version=5
-indicator("Currency Pros - Smart Money Concepts", shorttitle="CurrencyPros SMC", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+//@version=6
+indicator("Currency Pros - Smart Money Concepts", shorttitle="CurrPros", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
 
 // ───────────────────────────────────────────── Inputs ─────────────────────────────────────────────
 grpStruct = "Market Structure (BOS / CHoCH)"
@@ -167,22 +167,24 @@ if showOB and bearishBreakout
 
 // mitigate order blocks once price trades back through them
 if showOB
-    for i = array.size(bullOBBoxes) - 1 to 0
-        id = array.get(bullOBBoxes, i)
-        if low <= box.get_bottom(id)
-            box.set_bgcolor(id, obMitCol)
-            box.set_border_color(id, color.new(obMitCol, 0))
-            box.set_extend(id, extend.none)
-            box.set_right(id, bar_index)
-            array.remove(bullOBBoxes, i)
-    for i = array.size(bearOBBoxes) - 1 to 0
-        id = array.get(bearOBBoxes, i)
-        if high >= box.get_top(id)
-            box.set_bgcolor(id, obMitCol)
-            box.set_border_color(id, color.new(obMitCol, 0))
-            box.set_extend(id, extend.none)
-            box.set_right(id, bar_index)
-            array.remove(bearOBBoxes, i)
+    if array.size(bullOBBoxes) > 0
+        for i = array.size(bullOBBoxes) - 1 to 0
+            id = array.get(bullOBBoxes, i)
+            if low <= box.get_bottom(id)
+                box.set_bgcolor(id, obMitCol)
+                box.set_border_color(id, color.new(obMitCol, 0))
+                box.set_extend(id, extend.none)
+                box.set_right(id, bar_index)
+                array.remove(bullOBBoxes, i)
+    if array.size(bearOBBoxes) > 0
+        for i = array.size(bearOBBoxes) - 1 to 0
+            id = array.get(bearOBBoxes, i)
+            if high >= box.get_top(id)
+                box.set_bgcolor(id, obMitCol)
+                box.set_border_color(id, color.new(obMitCol, 0))
+                box.set_extend(id, extend.none)
+                box.set_right(id, bar_index)
+                array.remove(bearOBBoxes, i)
 
 // ───────────────────────────────────────── Fair Value Gaps ─────────────────────────────────────────
 if showFVG
@@ -197,20 +199,22 @@ if showFVG
         if array.size(bearFVGBoxes) > fvgMax
             box.delete(array.shift(bearFVGBoxes))
 
-    for i = array.size(bullFVGBoxes) - 1 to 0
-        id = array.get(bullFVGBoxes, i)
-        if low <= box.get_bottom(id)
-            box.set_bgcolor(id, fvgFillCol)
-            box.set_border_color(id, color.new(fvgFillCol, 0))
-            box.set_right(id, bar_index)
-            array.remove(bullFVGBoxes, i)
-    for i = array.size(bearFVGBoxes) - 1 to 0
-        id = array.get(bearFVGBoxes, i)
-        if high >= box.get_top(id)
-            box.set_bgcolor(id, fvgFillCol)
-            box.set_border_color(id, color.new(fvgFillCol, 0))
-            box.set_right(id, bar_index)
-            array.remove(bearFVGBoxes, i)
+    if array.size(bullFVGBoxes) > 0
+        for i = array.size(bullFVGBoxes) - 1 to 0
+            id = array.get(bullFVGBoxes, i)
+            if low <= box.get_bottom(id)
+                box.set_bgcolor(id, fvgFillCol)
+                box.set_border_color(id, color.new(fvgFillCol, 0))
+                box.set_right(id, bar_index)
+                array.remove(bullFVGBoxes, i)
+    if array.size(bearFVGBoxes) > 0
+        for i = array.size(bearFVGBoxes) - 1 to 0
+            id = array.get(bearFVGBoxes, i)
+            if high >= box.get_top(id)
+                box.set_bgcolor(id, fvgFillCol)
+                box.set_border_color(id, color.new(fvgFillCol, 0))
+                box.set_right(id, bar_index)
+                array.remove(bearFVGBoxes, i)
 
 // ───────────────────────────────────────── Liquidity Sweeps ─────────────────────────────────────────
 if showLiquidity
@@ -239,33 +243,38 @@ if showLiquidity
             line.delete(array.shift(pivotLowLines))
 
     // a sweep = wick trades through a resting level then closes back on the other side (stop hunt)
-    for i = array.size(pivotHighPrices) - 1 to 0
-        p = array.get(pivotHighPrices, i)
-        if high > p and close < p
-            line.delete(array.get(pivotHighLines, i))
-            label.new(bar_index, high, "Sweep", style=label.style_label_down, color=liqBearCol, textcolor=color.white, size=size.tiny)
-            array.remove(pivotHighPrices, i)
-            array.remove(pivotHighBars, i)
-            array.remove(pivotHighLines, i)
+    if array.size(pivotHighPrices) > 0
+        for i = array.size(pivotHighPrices) - 1 to 0
+            p = array.get(pivotHighPrices, i)
+            if high > p and close < p
+                line.delete(array.get(pivotHighLines, i))
+                label.new(bar_index, high, "Sweep", style=label.style_label_down, color=liqBearCol, textcolor=color.white, size=size.tiny)
+                array.remove(pivotHighPrices, i)
+                array.remove(pivotHighBars, i)
+                array.remove(pivotHighLines, i)
 
-    for i = array.size(pivotLowPrices) - 1 to 0
-        p = array.get(pivotLowPrices, i)
-        if low < p and close > p
-            line.delete(array.get(pivotLowLines, i))
-            label.new(bar_index, low, "Sweep", style=label.style_label_up, color=liqBullCol, textcolor=color.white, size=size.tiny)
-            array.remove(pivotLowPrices, i)
-            array.remove(pivotLowBars, i)
-            array.remove(pivotLowLines, i)
+    if array.size(pivotLowPrices) > 0
+        for i = array.size(pivotLowPrices) - 1 to 0
+            p = array.get(pivotLowPrices, i)
+            if low < p and close > p
+                line.delete(array.get(pivotLowLines, i))
+                label.new(bar_index, low, "Sweep", style=label.style_label_up, color=liqBullCol, textcolor=color.white, size=size.tiny)
+                array.remove(pivotLowPrices, i)
+                array.remove(pivotLowBars, i)
+                array.remove(pivotLowLines, i)
 
 // ───────────────────────────────────────── Fibonacci (0.71 / 0.75 sniper zone) ─────────────────────────────────────────
 // drawn on the impulse leg that just produced a BOS/CHoCH; 0.71-0.75 is highlighted as the entry zone
 if showFib and (bullishBreakout or bearishBreakout) and not na(legLow) and not na(legHigh)
-    for i = array.size(fibLines) - 1 to 0
-        line.delete(array.pop(fibLines))
-    for i = array.size(fibLabels) - 1 to 0
-        label.delete(array.pop(fibLabels))
-    for i = array.size(fibZoneBoxArr) - 1 to 0
-        box.delete(array.pop(fibZoneBoxArr))
+    if array.size(fibLines) > 0
+        for i = array.size(fibLines) - 1 to 0
+            line.delete(array.pop(fibLines))
+    if array.size(fibLabels) > 0
+        for i = array.size(fibLabels) - 1 to 0
+            label.delete(array.pop(fibLabels))
+    if array.size(fibZoneBoxArr) > 0
+        for i = array.size(fibZoneBoxArr) - 1 to 0
+            box.delete(array.pop(fibZoneBoxArr))
 
     legTop = legHigh
     legBottom = legLow
@@ -290,8 +299,9 @@ rangeHigh = ta.highest(high, vpLookback)
 rangeLow = ta.lowest(low, vpLookback)
 
 if showVP and barstate.islast and rangeHigh > rangeLow
-    for i = array.size(vpBoxes) - 1 to 0
-        box.delete(array.pop(vpBoxes))
+    if array.size(vpBoxes) > 0
+        for i = array.size(vpBoxes) - 1 to 0
+            box.delete(array.pop(vpBoxes))
     if not na(vpPocLine)
         line.delete(vpPocLine)
 
